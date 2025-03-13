@@ -74,7 +74,7 @@ class ProductController extends Controller
 
         // 处理 SKU 码，防止特殊字符导致文件名错误
         $sanitizedSkuCode = preg_replace('/[^A-Za-z0-9_\-]/', '_', $request->sku_code);
-        $barcodeImageName = time() . uniqid() . '.png';
+        $barcodeImageName = $sanitizedSkuCode . '_' . time() . uniqid() . '.png';
         $barcodePath = $barcodeFolder . '/' . $barcodeImageName;
 
         // 生成条形码（使用 barcode_number 作为条形码数据）
