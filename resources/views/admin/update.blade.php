@@ -54,6 +54,11 @@
                                     <input type="text" class="form-control" id="sku_code" name="sku_code" value="{{ $product->sku_code }}" required>
                                 </div>
 
+                                <div class="mb-3">
+                                    <label for="barcode_number" class="form-label fw-bold">Barcode Number:</label>
+                                    <input type="text" class="form-control" id="barcode_number" name="barcode_number" value="{{ $product->barcode ? $product->barcode->barcode_number : 'No Barcode' }}" required>
+                                </div>
+
                                 <button type="submit" class="btn btn-primary w-100 shadow-sm">Submit</button>
                             </form>
                         </div>

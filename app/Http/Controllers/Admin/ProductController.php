@@ -65,9 +65,13 @@ class ProductController extends Controller
             'sku_code' => strtoupper($request->sku_code),
         ]);
 
-        $barcodeFolder = public_path('assets/barcodes');
+        // 确保 barcode_number 存在
+        if (empty($request->barcode_number)) {
+            return redirect()->back()->withErrors(['barcode' => 'Barcode number is required.']);
+        }
 
-        // 确保目录存在
+        // 创建条形码目录（如果不存在）
+        $barcodeFolder = public_path('assets/barcodes');
         if (!is_dir($barcodeFolder) && !mkdir($barcodeFolder, 0777, true) && !is_dir($barcodeFolder)) {
             return redirect()->back()->withErrors(['barcode' => 'Failed to create barcode directory.']);
         }
@@ -110,9 +114,11 @@ class ProductController extends Controller
         $request->validate([
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'sku_code' => 'required|string|max:255|unique:products,sku_code,' . $id,
+            'barcode_number' => 'required|string|max:255|unique:barcodes,barcode_number,' . $id . ',product_id',
         ]);
 
         $product = Product::findOrFail($id);
+        $oldSkuCode = $product->sku_code;
 
         if ($request->hasFile('image')) {
             if ($product->image && file_exists(public_path('assets/' . $product->image))) {
@@ -127,7 +133,43 @@ class ProductController extends Controller
         $product->sku_code = strtoupper($request->sku_code);
         $product->save();
 
-        return redirect()->route('admin.dashboard')->with('success', 'Product updated successfully');
+        $barcode = Barcode::where('product_id', $id)->first();
+        $barcodeFolder = public_path('assets/barcodes');
+
+       // 确保条形码目录存在
+        if (!is_dir($barcodeFolder) && !mkdir($barcodeFolder, 0777, true) && !is_dir($barcodeFolder)) {
+            return redirect()->back()->withErrors(['barcode' => 'Failed to create barcode directory.']);
+        }
+
+        // 检查 `sku_code` 或 `barcode_number` 是否变更
+        $shouldGenerateNewBarcode = !$barcode || $barcode->barcode_number !== $request->barcode_number || $oldSkuCode !== $request->sku_code;
+
+        if (!$barcode) {
+            $barcode = new Barcode();
+            $barcode->product_id = $id;
+        } elseif ($shouldGenerateNewBarcode) {
+            // 删除旧的条形码图片
+            if ($barcode->barcode_image && file_exists(public_path('assets/' . $barcode->barcode_image))) {
+                unlink(public_path('assets/' . $barcode->barcode_image));
+            }
+
+            // 生成新条形码
+            $sanitizedSkuCode = preg_replace('/[^A-Za-z0-9_\-]/', '_', $request->sku_code);
+            $barcodeImageName = $sanitizedSkuCode . '_' . time() . uniqid() . '.png';
+            $barcodePath = $barcodeFolder . '/' . $barcodeImageName;
+
+            $generator = new BarcodeGeneratorPNG();
+            $barcodeData = $generator->getBarcode($request->barcode_number, $generator::TYPE_CODE_128, 3, 50);
+            file_put_contents($barcodePath, $barcodeData);
+
+            $barcode->barcode_image = 'barcodes/' . $barcodeImageName;
+        }
+
+        // ✅ 更新 `barcode_number`
+        $barcode->barcode_number = $request->barcode_number;
+        $barcode->save();
+
+        return redirect()->route('product.view', $id)->with('success', 'Product updated successfully.');
     }
 
     public function showUploadForm($id) {
