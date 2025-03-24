@@ -127,38 +127,40 @@
             let pagination = $('#pagination');
             pagination.empty();
 
-            // 上一页
-            if (currentPage > 1) {
-                pagination.append(`
-                    <li class="page-item">
-                        <a class="page-link" href="#" data-page="${currentPage - 1}">Previous</a>
-                    </li>
-                `);
+            let paginationHtml = `
+                <nav aria-label="Page navigation example">
+                    <ul class="pagination">
+                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" aria-label="Previous" data-page="${currentPage - 1}">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>`;
+
+            for (let i = 1; i <= lastPage; i++) {
+                paginationHtml += `
+                        <li class="page-item ${i === currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" data-page="${i}">${i}</a>
+                        </li>`;
             }
 
-            // 页码
-            for (let i = Math.max(1, currentPage - 2); i <= Math.min(lastPage, currentPage + 2); i++) {
-                pagination.append(`
-                    <li class="page-item ${i === currentPage ? 'active' : ''}">
-                        <a class="page-link" href="#" data-page="${i}">${i}</a>
-                    </li>
-                `);
-            }
+            paginationHtml += `
+                        <li class="page-item ${currentPage === lastPage ? 'disabled' : ''}">
+                            <a class="page-link" href="#" aria-label="Next" data-page="${currentPage + 1}">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>`;
 
-            // 下一页
-            if (currentPage < lastPage) {
-                pagination.append(`
-                    <li class="page-item">
-                        <a class="page-link" href="#" data-page="${currentPage + 1}">Next</a>
-                    </li>
-                `);
-            }
+            pagination.html(paginationHtml);
 
-            // 分页点击事件
+            // 绑定点击事件
             $('.page-link').on('click', function(e) {
                 e.preventDefault();
                 const page = $(this).data('page');
-                loadTable(page);
+                if (page >= 1 && page <= lastPage) {
+                    loadTable(page);
+                }
             });
         }
     });
